@@ -1,7 +1,9 @@
 pragma solidity ^0.4.4;
 
+//Minimal size proxy without reducing functionality
 contract Proxy {
-
+    
+    //masterContract would be the controller in current system
     address masterContract = msg.sender;
 
     modifier onlyMaster () {
@@ -46,7 +48,8 @@ library Lib1{
 contract IdentityHub {
     uint    public version;
     uint    public existingIdentityNum = 1;
-
+    
+    //Defines an idenitity - is referred to by an idenNum
     struct identity {
         address userKey;
         address proposedUserKey;
@@ -72,6 +75,7 @@ contract IdentityHub {
     }
     mapping (address => Delegate) public delegates;
 
+    //Maps a user or delegate to their corresponding idenitity. 
     struct UserTypeAndNum {
         uint idenNum;
         bool isUserKey;
@@ -107,7 +111,7 @@ contract IdentityHub {
         uint value
     );
 
-    //MODIFIERS TO LIMIT ACCESS
+    //MODIFIERS
 
     //makes sure no existing data is being overwritten
     modifier checkAddressesExistance(address _userKey, address[] _delegates) {
@@ -129,7 +133,9 @@ contract IdentityHub {
         if (userTypesAndNums[key].idenNum == 0 || userTypesAndNums[key].isUserKey) throw;
         _;
     }
-
+    
+    //GENERAL FUNCTIONS
+    
     //creates a basic identity
     function createIdentity(address _userKey, address[] _delegates, uint _longTimeLock, uint _shortTimeLock)
                 checkAddressesExistance(_userKey, _delegates){
@@ -156,11 +162,13 @@ contract IdentityHub {
         Iden[idenNum].proxy.forward(destination, value, data);
         Forwarded (Iden[idenNum].proxy, destination, value, data);
     }
-
+    
+    //This exists to have the Recieved event w/o it being in Proxy (to save gas)
     function fundProxy() onlyUserKeys(msg.sender) payable {
         uint idenNum = userTypesAndNums[msg.sender].idenNum;
         //do not need to check return - all proxys are trusted
         Iden[idenNum].proxy.send(msg.value);
+        Received (Iden[idenNum].proxy, msg.sender, msg.value);
         Received(Iden[idenNum].proxy, msg.sender, msg.value);
     }
 
@@ -174,7 +182,7 @@ contract IdentityHub {
         RecoveryEvent("signControllerChange", msg.sender);
     }
 
-    //this function could be made to be compatable - mostly - with current identity factory.
+    //this function could be made to be compatable - mostly - with current identity factory - if it sent info.
     function userChangeController() onlyUserKeys(msg.sender) onlyUserKeys(msg.sender) {
         uint idenNum = userTypesAndNums[msg.sender].idenNum;
         var user = Iden[idenNum];
